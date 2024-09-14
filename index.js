@@ -7,7 +7,7 @@ const multer = require('multer');
 const bcrypt = require('bcrypt')
 const AdminModel = require('./model/admin');
 
-
+//checking 2
 const app = express();
 
 const storage = multer.memoryStorage();
