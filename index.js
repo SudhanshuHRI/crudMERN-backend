@@ -6,6 +6,7 @@ const DatabaseConnection = require('./utils/databaseConnection');
 const multer = require('multer');
 const bcrypt = require('bcrypt')
 const AdminModel = require('./model/admin');
+const Joi = require('joi');
 
 //checking 2
 const app = express();
@@ -19,7 +20,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // Routes
 app.get('/', async (req, res) => {
-        res.json({message:"Welcome to MERN"});
+    res.json({ message: "Welcome to MERN" });
 });
 
 app.get('/api/getDummyUsers', async (req, res) => {
@@ -49,13 +50,6 @@ app.get('/api/getUsers', async (req, res) => {
 
     if (mongoose.connection.readyState === 1) {
         console.log("Connection successfull")
-        // const usersSchema = new mongoose.Schema({
-        //     name: String,
-        //     email: String,
-        //     password: String
-        // })
-        // const item = mongoose.model('users', usersSchema)
-
         const existingItem = await UserModel.find({});
         res.json(existingItem)
 
@@ -124,7 +118,7 @@ app.post('/api/postUsers', upload.single('photo'), async (req, res) => {
         console.error("Error processing request:", err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
-}); 
+});
 
 app.put('/api/UpdateUser/:id', upload.single('photo'), async (req, res) => {
 
@@ -247,6 +241,8 @@ app.post('/api/registerAdmin', upload.single('photo'), async (req, res) => {
 
 app.post('/api/loginAdmin', async (req, res) => {
 
+  
+
     try {
         const email = req.body.email;
         const password = req.body.password;
@@ -278,37 +274,7 @@ app.post('/api/loginAdmin', async (req, res) => {
         res.status(500).json({ error: 'Login failed: ' + err.message });
     }
 
-    // try {
-    //     await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
-    //     if (mongoose.connection.readyState === 1) {
-    //         console.log("Connection successfull")
-
-    //         const email = req.body.email;
-
-    //         const password = req.body.password;
-
-    //         const Admin = new AdminModel({
-    //             name: name,
-    //             email: email,
-    //             phone: phone,
-    //             city: city,
-    //             photo: profilephoto.path,
-    //             password: password
-    //         });
-
-    //         await Admin.save();
-    //         console.log("Admin Saved in Database: ", Admin)
-    //         res.status(201).json(Admin);
-    //     } else {
-    //         res.json("Connection not successfull");
-    //     }
-
-
-
-    // } catch (err) {
-    //     console.error("Error processing request:", err);
-    //     res.status(500).json({ error: 'Internal Server Error' });
-    // }
+   
 });
 
 app.get('/api/getAllAdmin', async (req, res) => {
