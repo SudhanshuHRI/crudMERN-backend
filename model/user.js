@@ -1,29 +1,41 @@
+const { required } = require('joi');
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
     firstName: {
         type: String,
-        // required: true
+        required: true
     },
     lastName: {
         type: String,
-        // required: true
+        required: true
     },
     email: {
         type: String,
-        // required: true,
-        // unique: true
+        required: true,
+        unique: true
     },
     phone: {
         type: String,
-        // required: true
+        required: true
     },
     city: {
-        type: String
+        type: String,
+        required:true
     },
     photo: {
-        type: String 
-    }
+        type: String,
+        required:true 
+    },
+    password:{
+        type:String,
+        required:true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+      },
+    
 });
 
 

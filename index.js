@@ -2,13 +2,11 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const UserModel = require('./model/user'); // Ensure this path is correct
-const DatabaseConnection = require('./utils/databaseConnection');
 const multer = require('multer');
 const bcrypt = require('bcrypt')
-const AdminModel = require('./model/admin');
 const Joi = require('joi');
 
-//checking 2
+
 const app = express();
 
 const storage = multer.memoryStorage();
@@ -81,29 +79,44 @@ app.get('/api/getUsers/:id', async (req, res) => {
     }
 });
 
-app.post('/api/postUsers', upload.single('photo'), async (req, res) => {
+app.post('/api/register', upload.single('photo'), async (req, res) => {
 
     try {
 
         console.log('Uploaded Files:', req.file);
-
         await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
         if (mongoose.connection.readyState === 1) {
             console.log("Connection successfull")
-            const firstname = req.body.fname;
-            const lastname = req.body.lname;
+            const firstname = req.body.firstName; //yhn par wo naam padega jo postman ke key me likha hai;
+            const lastname = req.body.lastName;
             const email = req.body.email;
             const phone = req.body.phone;
+            const password = req.body.password;
             const city = req.body.city;
             const profilephoto = req.file;
+
+            console.log("firstname :",firstname);
+            console.log("lastname :",lastname);
+            console.log("email :",email);
+            console.log("phone :",phone);
+            console.log("password :",password);
+            console.log("city :",city);
+            console.log("photo:",profilephoto)
+            
+
+
+
+
+            const hashpassword = await bcrypt.hash(password,10);
 
             const user = new UserModel({
                 firstName: firstname,
                 lastName: lastname,
-                email: email,
+                email: email.toLowerCase(),
                 phone: phone,
                 city: city,
-                photo: profilephoto.buffer
+                photo: profilephoto.buffer,
+                password:hashpassword
             });
 
             await user.save();
@@ -202,6 +215,40 @@ app.delete('/api/DeleteUser/:id', async (req, res) => {
     }
 
 });
+
+app.post('/api/login', async (req, res) => {
+
+    try {
+        const email = req.body.email.toLowerCase();
+        const password = req.body.password;
+
+        await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
+        if (mongoose.connection.readyState === 1) {
+
+            const checkUser = await UserModel.findOne({email})
+            
+          
+            if (!checkUser) return res.status(404).json({ error: 'User not found' });
+
+            const isMatch = await bcrypt.compare(password, checkUser.password);
+
+            if (!isMatch) {
+                return res.status(401).json({ error: 'Invalid password' });
+            }
+            res.json({ message: "Login successful!" });
+        } else {
+            res.status(400).json({ message: "Unable to connect to database" })
+        }
+
+
+    } catch (err) {
+        res.status(500).json({ error: 'Login failed: ' + err.message });
+    }
+
+
+});
+
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
