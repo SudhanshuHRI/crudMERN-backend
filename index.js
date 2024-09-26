@@ -70,6 +70,10 @@ app.get('/api/getUsers/:id', async (req, res) => {
 
     const { id } = req.params;
 
+    if (!mongoose.isValidObjectId(id)) {
+        res.status(404).json({ status: 404, message: `No such Id : ${id}` })
+    }
+
     await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
 
     if (mongoose.connection.readyState === 1) {
@@ -124,15 +128,6 @@ app.post('/api/register', upload.single('photo'), async (req, res) => {
             if (mongoose.connection.readyState === 1) {
                 console.log("Connection successfull")
 
-
-                // console.log("firstname :", firstname);
-                // console.log("lastname :", lastname);
-                // console.log("email :", email);
-                // console.log("phone :", phone);
-                // console.log("password :", password);
-                // console.log("city :", city);
-                // console.log("photo:", profilephoto)
-
                 const hashpassword = await bcrypt.hash(password, 10);
 
                 const user = new UserModel({
@@ -165,69 +160,32 @@ app.put('/api/UpdateUser/:id', upload.single('photo'), async (req, res) => {
 
     const { id } = req.params;
 
-    const firstname = req.body.fname;
-    const lastname = req.body.lname;
-    const email = req.body.email;
-    const phone = req.body.phone;
-    const city = req.body.city;
-    const photo = req.file;
+    if (!mongoose.isValidObjectId(id)) {
+        res.status(404).json({ status: 404, message: `No such Id : ${id}` })
+    }
+
+    const updatedData = req.body;
+
+    if (req.file) {
+        updatedData.photo = req.file.buffer;
+    }
 
     await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
     if (mongoose.connection.readyState === 1) {
-        const updatedUser = await UserModel.findByIdAndUpdate(
-            id,
-            {
-                firstName: firstname,
-                lastName: lastname,
-                email: email,
-                phone: phone,
-                city: city,
-                photo: photo
-            },
-            { new: true, runValidators: true } // Options to return the updated document
-        );
 
-        if (updatedUser) { res.json({ "updated Data": updatedUser }) }
-        else { res.json({ "message": "unable to update" }) }
+
+        const updatedValue = await UserModel.findByIdAndUpdate(id, updatedData, { new: true });
+
+        if (!updatedValue) {
+            return res.status(404).send('Value not found!!');
+        }
+        else {
+            res.status(200).json({ status: 200, message: "Details updated.", data: updatedValue });
+        }
+
     }
 
 
-
-    // try {
-    //     console.log('Request Body:', req.body.example);
-    //     console.log('Uploaded Files:', req.file);
-
-    //     await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
-    //     if (mongoose.connection.readyState === 1) {
-    //         console.log("Connection successfull")
-    //         const firstname = req.body.fname;
-    //         const lastname = req.body.lname;
-    //         const email = req.body.email;
-    //         const phone = req.body.phone;
-    //         const city = req.body.city;
-    //         const profilephoto = req.file;
-
-    //         const user = new UserModel({
-    //             firstName: firstname,
-    //             lastName: lastname,
-    //             email: email,
-    //             phone: phone,
-    //             city: city,
-    //             photo: profilephoto.path
-    //         });
-
-    //         await user.save();
-    //         res.status(201).json(user);
-    //     } else {
-    //         res.json("Connection not successfull");
-    //     }
-
-
-
-    // } catch (err) {
-    //     console.error("Error processing request:", err);
-    //     res.status(500).json({ error: 'Internal Server Error' });
-    // }
 });
 
 app.delete('/api/DeleteUser/:id', async (req, res) => {
@@ -243,6 +201,23 @@ app.delete('/api/DeleteUser/:id', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
+
+    const schema = Joi.object({
+        email: Joi.string().required(),
+        password: Joi.string().required(),
+    });
+
+
+    const { error } = schema.validate(req.body);
+
+    if (error) {
+
+        return res.status(400).json({
+            message: 'Validation failed',
+            error: error.details[0].message,
+        });
+    }
+
 
     try {
         const email = req.body.email;
@@ -262,9 +237,9 @@ app.post('/api/login', async (req, res) => {
                 if (!checkUser) return res.status(404).json({ error: 'User not found' });
                 const isMatch = await bcrypt.compare(password, checkUser.password);
                 if (!isMatch) {
-                    return res.status(401).json({ error: 'Invalid password' });
+                    return res.status(401).json({ status: 401, error: 'Invalid password' });
                 }
-                res.json({ message: "Login successfull!" });
+                res.status(200).json({ status: 200, message: "Login successfull!" });
             } else {
                 res.status(400).json({ message: "Unable to connect to database" })
             }
