@@ -5,8 +5,9 @@ const UserModel = require('./model/user'); // Ensure this path is correct
 const multer = require('multer');
 const bcrypt = require('bcrypt')
 const Joi = require('joi');
+const jwt = require('jsonwebtoken');
 
-
+const secretKey = 'Sudhanshu@221254';
 const app = express();
 
 const storage = multer.memoryStorage();
@@ -15,13 +16,60 @@ const upload = multer({ storage: storage });
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+const authenticateToken = (req, res, next) => {
+
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) return res.status(401).send({ status: 401, message: 'Token required.' });
+
+    const varifyTkn = varifyToken(token);
+    if (varifyTkn) {
+        next();
+    } else {
+        res.status(403).send({ status: 403, message: 'Invalid Token' });
+    }
+}
+
+
+
+
+const generateToken = (emailId) => {
+
+    // payload means this information is used to generate token.
+    const payload = {
+        email: emailId
+    };
+
+    // this will generate a token that will expire in 1 hour.
+    const token = jwt.sign(payload, secretKey, {
+        expiresIn: '1h', // Token expiration time
+    });
+
+    return token;
+}
+
+const varifyToken = (token) => {
+
+
+
+    try {
+        const result = jwt.verify(token, secretKey);
+        return result;
+    } catch (error) {
+        return false;
+    }
+
+
+
+}
 
 // Routes
 app.get('/', async (req, res) => {
     res.status(200).json({ status: 200, message: "Welcome to MERN Crud..." });
 });
 
-app.get('/api/getDummyUsers', async (req, res) => {
+app.get('/api/getDummyUsers', authenticateToken, async (req, res) => {
 
     try {
         await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/sample_mflix');
@@ -46,7 +94,7 @@ app.get('/api/getDummyUsers', async (req, res) => {
     }
 });
 
-app.get('/api/getUsers', async (req, res) => {
+app.get('/api/getUsers', authenticateToken, async (req, res) => {
 
     try {
         await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
@@ -66,7 +114,7 @@ app.get('/api/getUsers', async (req, res) => {
 
 });
 
-app.get('/api/getUsers/:id', async (req, res) => {
+app.get('/api/getUsers/:id', authenticateToken, async (req, res) => {
 
     const { id } = req.params;
 
@@ -156,7 +204,7 @@ app.post('/api/register', upload.single('photo'), async (req, res) => {
 
 });
 
-app.put('/api/UpdateUser/:id', upload.single('photo'), async (req, res) => {
+app.put('/api/UpdateUser/:id', upload.single('photo'), authenticateToken, async (req, res) => {
 
     const { id } = req.params;
 
@@ -188,7 +236,7 @@ app.put('/api/UpdateUser/:id', upload.single('photo'), async (req, res) => {
 
 });
 
-app.delete('/api/DeleteUser/:id', async (req, res) => {
+app.delete('/api/DeleteUser/:id', authenticateToken, async (req, res) => {
 
     const { id } = req.params;
 
@@ -223,9 +271,6 @@ app.post('/api/login', async (req, res) => {
         const email = req.body.email;
         const password = req.body.password;
 
-        console.log("email:", email)
-        console.log("password:", password)
-
         if (email == "" || email == undefined) {
             res.json({ status: 400, message: "Email is required!!" })
         } else if (password == "" || password == undefined) {
@@ -239,7 +284,7 @@ app.post('/api/login', async (req, res) => {
                 if (!isMatch) {
                     return res.status(401).json({ status: 401, error: 'Invalid password' });
                 }
-                res.status(200).json({ status: 200, message: "Login successfull!" });
+                res.status(200).json({ status: 200, message: "Login successfull!", token: generateToken(email) });
             } else {
                 res.status(400).json({ message: "Unable to connect to database" })
             }
@@ -254,10 +299,10 @@ app.post('/api/login', async (req, res) => {
 
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Server error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-});
+// app.use((err, req, res, next) => {
+//     console.error('Server error:', err);
+//     res.status(500).json({ error: 'Internal Server Error' });
+// });
 
 // Server is live on this port
 app.listen(3000, () => {
