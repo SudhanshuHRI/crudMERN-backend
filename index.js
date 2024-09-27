@@ -278,13 +278,24 @@ app.post('/api/login', async (req, res) => {
         } else {
             await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
             if (mongoose.connection.readyState === 1) {
+
                 const checkUser = await UserModel.findOne({ email: email.toLowerCase() })
                 if (!checkUser) return res.status(404).json({ error: 'User not found' });
+
                 const isMatch = await bcrypt.compare(password, checkUser.password);
-                if (!isMatch) {
-                    return res.status(401).json({ status: 401, error: 'Invalid password' });
-                }
-                res.status(200).json({ status: 200, message: "Login successfull!", token: generateToken(email) });
+                if (!isMatch) return res.status(401).json({ status: 401, error: 'Invalid password' });
+
+                const getToken = generateToken(email)
+
+                res.cookie('tokenSudh', getToken, {
+                    httpOnly: true, // Makes the cookie inaccessible to JavaScript
+                    secure: true,   // Use true in production when using HTTPS
+                    sameSite: 'strict', // Prevents CSRF attacks by restricting cross-site requests
+                    maxAge: 60 * 60 * 1000, // Token expiration time in milliseconds (1 hour here)
+                });
+
+                res.status(200).json({ status: 200, message: "Login successfull!" ,token:getToken});
+
             } else {
                 res.status(400).json({ message: "Unable to connect to database" })
             }
