@@ -13,13 +13,36 @@ const app = express();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Middleware
-app.use(cors());
+// Middlewares
+app.use(cors({
+    origin: 'http://localhost:3000', // Adjust this to your frontend URL
+    credentials: true // Allow credentials (cookies) to be sent
+}
+
+));
+
 app.use(express.json({ limit: '10mb' }));
+
 const authenticateToken = (req, res, next) => {
 
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    //if token is send through headers
+    // const authHeader = req.headers['authorization'];
+    //const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    //if token is saved in cookies:method 1
+    const cookie = req.headers.cookie;
+    let token = "";
+    if (cookie) {
+        const jwtCookie = cookie.split('; ').find(row => row.startsWith('jwt='));
+        token = jwtCookie ? jwtCookie.split('=')[1] : undefined;
+    } else {
+        token = undefined;
+    }
+
+
+    //if token is saved in cookies:method 2
+
+    //const token = req.cookie.jwt; //"jwt" cookie name
 
     if (!token) return res.status(401).send({ status: 401, message: 'Token required.' });
 
@@ -32,8 +55,7 @@ const authenticateToken = (req, res, next) => {
 }
 
 
-
-
+// functions
 const generateToken = (emailId) => {
 
     // payload means this information is used to generate token.
@@ -67,31 +89,6 @@ const varifyToken = (token) => {
 // Routes
 app.get('/', async (req, res) => {
     res.status(200).json({ status: 200, message: "Welcome to MERN Crud..." });
-});
-
-app.get('/api/getDummyUsers', authenticateToken, async (req, res) => {
-
-    try {
-        await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/sample_mflix');
-        if (mongoose.connection.readyState === 1) {
-            console.log("Connection successfull")
-            const usersSchema = new mongoose.Schema({
-                name: String,
-                email: String,
-                password: String
-            })
-            const item = mongoose.model('users', usersSchema)
-
-            const existingItem = await item.find({});
-            if (existingItem) {
-                res.status(200).json({ status: 200, message: "Dummy Users found.", data: existingItem })
-            } else {
-                res.status(404).json({ status: 404, message: " No Dummy Users found !!" })
-            }
-        }
-    } catch (err) {
-        res.status(500).json({ status: 500, message: "Unable to connect to database!!", error: err });
-    }
 });
 
 app.get('/api/getUsers', authenticateToken, async (req, res) => {
@@ -135,6 +132,50 @@ app.get('/api/getUsers/:id', authenticateToken, async (req, res) => {
 
     } else {
         res.status(500).json({ status: 500, messsage: "Unable to connect to database!!" });
+    }
+
+});
+
+app.put('/api/UpdateUser/:id', upload.single('photo'), authenticateToken, async (req, res) => {
+
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+        res.status(404).json({ status: 404, message: `No such Id : ${id}` })
+    }
+
+    const updatedData = req.body;
+
+    if (req.file) {
+        updatedData.photo = req.file.buffer;
+    }
+
+    await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
+    if (mongoose.connection.readyState === 1) {
+
+
+        const updatedValue = await UserModel.findByIdAndUpdate(id, updatedData, { new: true });
+
+        if (!updatedValue) {
+            return res.status(404).send('Value not found!!');
+        }
+        else {
+            res.status(200).json({ status: 200, message: "Details updated.", data: updatedValue });
+        }
+
+    }
+
+
+});
+
+app.delete('/api/DeleteUser/:id', authenticateToken, async (req, res) => {
+
+    const { id } = req.params;
+
+    await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
+    if (mongoose.connection.readyState === 1) {
+        const deletedUser = await UserModel.findByIdAndDelete(id);
+        if (deletedUser) { res.json({ message: "user deleted!!" }) }
     }
 
 });
@@ -204,50 +245,6 @@ app.post('/api/register', upload.single('photo'), async (req, res) => {
 
 });
 
-app.put('/api/UpdateUser/:id', upload.single('photo'), authenticateToken, async (req, res) => {
-
-    const { id } = req.params;
-
-    if (!mongoose.isValidObjectId(id)) {
-        res.status(404).json({ status: 404, message: `No such Id : ${id}` })
-    }
-
-    const updatedData = req.body;
-
-    if (req.file) {
-        updatedData.photo = req.file.buffer;
-    }
-
-    await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
-    if (mongoose.connection.readyState === 1) {
-
-
-        const updatedValue = await UserModel.findByIdAndUpdate(id, updatedData, { new: true });
-
-        if (!updatedValue) {
-            return res.status(404).send('Value not found!!');
-        }
-        else {
-            res.status(200).json({ status: 200, message: "Details updated.", data: updatedValue });
-        }
-
-    }
-
-
-});
-
-app.delete('/api/DeleteUser/:id', authenticateToken, async (req, res) => {
-
-    const { id } = req.params;
-
-    await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
-    if (mongoose.connection.readyState === 1) {
-        const deletedUser = await UserModel.findByIdAndDelete(id);
-        if (deletedUser) { res.json({ message: "user deleted!!" }) }
-    }
-
-});
-
 app.post('/api/login', async (req, res) => {
 
     const schema = Joi.object({
@@ -255,17 +252,14 @@ app.post('/api/login', async (req, res) => {
         password: Joi.string().required(),
     });
 
-
     const { error } = schema.validate(req.body);
 
     if (error) {
-
         return res.status(400).json({
             message: 'Validation failed',
             error: error.details[0].message,
         });
     }
-
 
     try {
         const email = req.body.email;
@@ -287,14 +281,14 @@ app.post('/api/login', async (req, res) => {
 
                 const getToken = generateToken(email)
 
-                res.cookie('tokenSudh', getToken, {
+                res.cookie('jwt', getToken, {
                     httpOnly: true, // Makes the cookie inaccessible to JavaScript
-                    secure: true,   // Use true in production when using HTTPS
+                    //secure: false,   // Use true in production when using HTTPS
                     sameSite: 'strict', // Prevents CSRF attacks by restricting cross-site requests
                     maxAge: 60 * 60 * 1000, // Token expiration time in milliseconds (1 hour here)
                 });
 
-                res.status(200).json({ status: 200, message: "Login successfull!" ,token:getToken});
+                res.status(200).json({ status: 200, message: "Login successfull!" });
 
             } else {
                 res.status(400).json({ message: "Unable to connect to database" })
@@ -308,7 +302,6 @@ app.post('/api/login', async (req, res) => {
 });
 
 
-
 // Error handling middleware
 // app.use((err, req, res, next) => {
 //     console.error('Server error:', err);
@@ -316,8 +309,8 @@ app.post('/api/login', async (req, res) => {
 // });
 
 // Server is live on this port
-app.listen(3000, () => {
-    console.log("Server is running on port 3000");
+app.listen(5000, () => {
+    console.log("Server is running on port 5000");
 });
 
 
