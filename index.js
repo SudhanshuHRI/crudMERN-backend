@@ -26,7 +26,7 @@ app.use(express.json({ limit: '10mb' }));
 const authenticateToken = (req, res, next) => {
 
     //if token is send through headers
-    // const authHeader = req.headers['authorization'];
+    //const authHeader = req.headers['authorization'];
     //const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     //if token is saved in cookies:method 1
@@ -46,7 +46,7 @@ const authenticateToken = (req, res, next) => {
 
     if (!token) return res.status(401).send({ status: 401, message: 'Token required.' });
 
-    const varifyTkn = varifyToken(token);
+    const varifyTkn = varifyJwtToken(token);
     if (varifyTkn) {
         next();
     } else {
@@ -71,7 +71,7 @@ const generateToken = (emailId) => {
     return token;
 }
 
-const varifyToken = (token) => {
+const varifyJwtToken = (token) => {
 
 
 
@@ -297,6 +297,84 @@ app.post('/api/login', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: 'Login failed: ' + err.message });
     }
+
+
+});
+
+app.post('/api/loginWithGoogle', async (req, res) => {
+
+    // console.log("req.body:",req.body.token)
+
+    const idToken = req.body.token;
+
+    try {
+        // const response = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${idToken}`);
+        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+        const data = await response.json();
+
+        if (data.error_description) {
+            console.error('Token verification failed:', data.error_description);
+            return null;
+        } else {
+            console.log('Token is valid:', data);
+            
+            return data;
+        }
+    } catch (error) {
+        console.error('Error verifying token:', error);
+        return null;
+    }
+
+    // const schema = Joi.object({
+    //     email: Joi.string().required(),
+    //     password: Joi.string().required(),
+    // });
+
+    // const { error } = schema.validate(req.body);
+
+    // if (error) {
+    //     return res.status(400).json({
+    //         message: 'Validation failed',
+    //         error: error.details[0].message,
+    //     });
+    // }
+
+    // try {
+    //     const email = req.body.email;
+    //     const password = req.body.password;
+
+    //     if (email == "" || email == undefined) {
+    //         res.json({ status: 400, message: "Email is required!!" })
+    //     } else if (password == "" || password == undefined) {
+    //         res.json({ status: 400, message: "Password is required!!" })
+    //     } else {
+    //         await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
+    //         if (mongoose.connection.readyState === 1) {
+
+    //             const checkUser = await UserModel.findOne({ email: email.toLowerCase() })
+    //             if (!checkUser) return res.status(404).json({ error: 'User not found' });
+
+    //             const isMatch = await bcrypt.compare(password, checkUser.password);
+    //             if (!isMatch) return res.status(401).json({ status: 401, error: 'Invalid password' });
+
+    //             const getToken = generateToken(email)
+
+    //             res.cookie('jwt', getToken, {
+    //                 httpOnly: true, // Makes the cookie inaccessible to JavaScript
+    //                 //secure: false,   // Use true in production when using HTTPS
+    //                 sameSite: 'strict', // Prevents CSRF attacks by restricting cross-site requests
+    //                 maxAge: 60 * 60 * 1000, // Token expiration time in milliseconds (1 hour here)
+    //             });
+
+    //             res.status(200).json({ status: 200, message: "Login successfull!" });
+
+    //         } else {
+    //             res.status(400).json({ message: "Unable to connect to database" })
+    //         }
+    //     }
+    // } catch (err) {
+    //     res.status(500).json({ error: 'Login failed: ' + err.message });
+    // }
 
 
 });
