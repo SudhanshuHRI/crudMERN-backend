@@ -54,7 +54,6 @@ const authenticateToken = (req, res, next) => {
     }
 }
 
-
 // functions
 const generateToken = (emailId) => {
 
@@ -288,7 +287,7 @@ app.post('/api/login', async (req, res) => {
                     maxAge: 60 * 60 * 1000, // Token expiration time in milliseconds (1 hour here)
                 });
 
-                res.status(200).json({ status: 200, message: "Login successfull!" });
+                res.status(200).json({ status: 200, message: "Login successfull!",user:checkUser });
 
             } else {
                 res.status(400).json({ message: "Unable to connect to database" })
@@ -298,7 +297,6 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ error: 'Login failed: ' + err.message });
     }
 
-
 });
 
 app.post('/api/loginWithGoogle', async (req, res) => {
@@ -306,19 +304,44 @@ app.post('/api/loginWithGoogle', async (req, res) => {
     // console.log("req.body:",req.body.token)
 
     const idToken = req.body.token;
+    const userData = req.body.userData;
+
 
     try {
-        // const response = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${idToken}`);
         const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
         const data = await response.json();
 
         if (data.error_description) {
-            console.error('Token verification failed:', data.error_description);
-            return null;
+            res.status(400).json({ status: 400, message: data.error_description })
         } else {
-            console.log('Token is valid:', data);
-            
-            return data;
+
+            const getToken = generateToken(data.email)
+            res.cookie('jwt', getToken, {
+                httpOnly: true,
+                //secure: false,   
+                sameSite: 'strict',
+                maxAge: 60 * 60 * 1000,
+            });
+
+            await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
+            if (mongoose.connection.readyState === 1) {
+                console.log("Connection successfull")
+                const existingItem = await UserModel.find({ email: userData.email.toLowerCase() });
+                
+                if (!existingItem) {
+                    const user = new UserModel({
+                        firstName: userData.displayName,
+                        lastName: "",
+                        email: userData.email.toLowerCase(),
+                        phone: "",
+                        city: "",
+                        photo: userData.photoURL
+                    });
+                    await user.save();
+                }
+            }
+
+            res.status(200).json({ status: 200, message: " GoogleToken is valid + jwt token added in cookies + user saved in database",  })
         }
     } catch (error) {
         console.error('Error verifying token:', error);
