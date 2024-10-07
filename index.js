@@ -2,10 +2,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const UserModel = require('./model/user'); // Ensure this path is correct
+const otpSchema = require("./model/otp")
 const multer = require('multer');
 const bcrypt = require('bcrypt')
 const Joi = require('joi');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+const redis = require('redis');
+
 
 const secretKey = 'Sudhanshu@221254';
 const app = express();
@@ -287,7 +291,7 @@ app.post('/api/login', async (req, res) => {
                     maxAge: 60 * 60 * 1000, // Token expiration time in milliseconds (1 hour here)
                 });
 
-                res.status(200).json({ status: 200, message: "Login successfull!",user:checkUser });
+                res.status(200).json({ status: 200, message: "Login successfull!", user: checkUser });
 
             } else {
                 res.status(400).json({ message: "Unable to connect to database" })
@@ -327,7 +331,7 @@ app.post('/api/loginWithGoogle', async (req, res) => {
             if (mongoose.connection.readyState === 1) {
                 console.log("Connection successfull")
                 const existingItem = await UserModel.find({ email: userData.email.toLowerCase() });
-                
+
                 if (!existingItem) {
                     const user = new UserModel({
                         firstName: userData.displayName,
@@ -341,7 +345,7 @@ app.post('/api/loginWithGoogle', async (req, res) => {
                 }
             }
 
-            res.status(200).json({ status: 200, message: " GoogleToken is valid + jwt token added in cookies + user saved in database",  })
+            res.status(200).json({ status: 200, message: " GoogleToken is valid + jwt token added in cookies + user saved in database", })
         }
     } catch (error) {
         console.error('Error verifying token:', error);
@@ -399,6 +403,90 @@ app.post('/api/loginWithGoogle', async (req, res) => {
     //     res.status(500).json({ error: 'Login failed: ' + err.message });
     // }
 
+
+});
+
+app.post('/api/forgotPassword', async (req, res) => {
+
+
+    const email = req.body.email;
+    const varifyOtp = req.body.otp;
+
+
+    if (varifyOtp) {
+        await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
+        if (mongoose.connection.readyState === 1) {
+            const findotp = await otpSchema.findOne({ email: email })
+            if (findotp) {
+                if (findotp.otp == varifyOtp) {
+                    const currentTime = new Date();
+                    const expiresAt = new Date(findotp.createdAt);
+                    expiresAt.setMinutes(expiresAt.getMinutes() + 2);
+
+                    if (currentTime > expiresAt) {
+                        const findotp = await otpSchema.findOneAndDelete({ email: email })
+                        return res.status(400).json({ status: 400, message: 'OTP has expired' });
+                    } else {
+                        const findotp = await otpSchema.findOneAndDelete({ email: email })
+                        return res.status(200).json({ status: 200, message: "OTP varified" })
+                    }
+                } else {
+                    return res.status(400).json({ status: 400, message: "Wrong OTP!!" })
+                }
+            } else {
+                return res.status(400).json({ status: 400, message: "No OTP found!!" })
+            }
+
+        }
+
+
+    } else {
+
+        await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
+        if (mongoose.connection.readyState === 1) {
+            const findotp = await otpSchema.findOne({ email: email })
+            if (findotp) {
+                res.status(500).json({ status: 500, message: "otp sent already!!" })
+            } else {
+                let generatedOtp = Math.floor(Math.random() * 10000);
+
+                if (generatedOtp.toString().length != 4) {
+                    generatedOtp = generatedOtp + 1234;
+                }
+
+                const transporter = nodemailer.createTransport({
+                    service: 'gmail', 
+                    port: 465,
+                    secure: true,
+                    auth: {
+                        user: 'salil221254@gmail.com', 
+                        pass: 'lrnu pvye liml zygm'   
+                    }
+                });
+                const mailOptions = {
+                    from: 'salil221254@gmail.com', 
+                    to: email,                 
+                    subject: 'CRUD OTP',                         
+                    text: `Hi ${email}. \nYour otp is  : ${generatedOtp}`,                        
+                    // html: '<b>Hello world?</b>'                  
+                };
+                transporter.sendMail(mailOptions, async (error, info) => {
+                    if (error) {
+                        res.status(400).json({ status: 400, message: error })
+                    } else {
+                        const user = new otpSchema({
+                            email: email,
+                            otp: generatedOtp
+                        });
+
+                        await user.save();
+                        res.status(200).json({ status: 200, message: `OTP send to ${email}`, details: info });
+                    }
+                });
+            }
+        }
+
+    }
 
 });
 
