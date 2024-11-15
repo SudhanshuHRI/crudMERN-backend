@@ -9,21 +9,45 @@ const Joi = require('joi');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const redis = require('redis');
+const path = require('path')
 
 
 const secretKey = 'Sudhanshu@221254';
 const app = express();
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) { cb(null, "uploads/") },
+    filename: function (req, file, cb) { cb(null, Date.now() + path.extname(file.originalname)) }
+});
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    // fileFilter: function (req, file, cb) {
+    //     const fileTypes = /jpeg|jpg|png|gif/;
+    //     const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    //     const mimetype = fileTypes.test(file.mimetype)
+
+    //     // console.log(extname,mimetype,fileTypes,file.mimetype)
+
+    //     if (extname && mimetype) {
+    //         return cb(null, true)
+    //     } else {
+    //         cb("Error: Image only")
+    //     }
+    // }
+
+
+});
 
 // Middlewares
 app.use(cors({
-    origin: 'http://localhost:3000', // Adjust this to your frontend URL
+    origin: ['http://localhost:3000'], // Adjust this to your frontend URL
     credentials: true // Allow credentials (cookies) to be sent
 }
 
 ));
+
+app.use("/uploads", express.static('uploads'))
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -144,26 +168,32 @@ app.put('/api/UpdateUser/:id', upload.single('photo'), authenticateToken, async 
     const { id } = req.params;
 
     if (!mongoose.isValidObjectId(id)) {
-        res.status(404).json({ status: 404, message: `No such Id : ${id}` })
+        return res.status(404).json({ status: 404, message: `No such Id : ${id}` })
     }
 
     const updatedData = req.body;
 
+
+
     if (req.file) {
-        updatedData.photo = req.file.buffer;
+        const allowedFromats = ["image/png", "image/jpg", "image/jpeg", "image/gif"]
+
+        if (!allowedFromats.includes(req.file.mimetype)) {
+            return res.json({ status: 500, message: "invalid photo format" })
+        }
+        updatedData.photo = req.file.path;
+
     }
 
+    console.log("updateData:", updatedData)
     await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
     if (mongoose.connection.readyState === 1) {
-
-
         const updatedValue = await UserModel.findByIdAndUpdate(id, updatedData, { new: true });
-
         if (!updatedValue) {
             return res.status(404).send('Value not found!!');
         }
         else {
-            res.status(200).json({ status: 200, message: "Details updated.", data: updatedValue });
+            return res.status(200).json({ status: 200, message: "Details updated.", data: updatedValue });
         }
 
     }
@@ -178,12 +208,14 @@ app.delete('/api/DeleteUser/:id', authenticateToken, async (req, res) => {
     await mongoose.connect('mongodb+srv://salil221254:IIafunHcWjN1XXtq@cluster0.krw4naq.mongodb.net/MERN_crud');
     if (mongoose.connection.readyState === 1) {
         const deletedUser = await UserModel.findByIdAndDelete(id);
-        if (deletedUser) { res.json({ message: "user deleted!!" }) }
+        if (deletedUser) { res.json({ status: 200, message: "user deleted!!" }) }
     }
 
 });
 
 app.post('/api/register', upload.single('photo'), async (req, res) => {
+
+    console.log("req.file:", req.file)
 
     const firstname = req.body.firstName; //yhn par wo naam padega jo postman ke key me likha hai;
     const lastname = req.body.lastName;
@@ -191,9 +223,11 @@ app.post('/api/register', upload.single('photo'), async (req, res) => {
     const phone = req.body.phone;
     const password = req.body.password;
     const city = req.body.city;
-    const profilephoto = req.file;
+    const profilephoto = req.file.path;
 
-
+    // console.log("req.body:", req.body)
+    console.log("req.file:", req.file)
+    // console.log("profilephoto:", profilephoto)
 
     const schema = Joi.object({
         firstName: Joi.string().required(),
@@ -228,11 +262,21 @@ app.post('/api/register', upload.single('photo'), async (req, res) => {
                     email: email.toLowerCase(),
                     phone: phone,
                     city: city,
-                    photo: profilephoto ? profilephoto.buffer : "",
+                    photo: profilephoto ? profilephoto : "",
                     password: hashpassword
                 });
 
-                await user.save();
+
+
+                try {
+                    await user.save();
+                } catch (error) {
+                    console.log("try-catch error:", error)
+                    res.json({ status: 500, Error: error })
+                }
+
+
+
                 res.status(201).json({ status: 201, message: "User registered successfully.", UserData: user });
             } else {
                 res.json({ status: 400, message: "Connection not successfull!!" });
@@ -242,10 +286,6 @@ app.post('/api/register', upload.single('photo'), async (req, res) => {
             res.status(500).json({ status: 500, message: 'Something went wrong!!', Error: err });
         }
     }
-
-
-
-
 });
 
 app.post('/api/login', async (req, res) => {
@@ -331,11 +371,13 @@ app.post('/api/loginWithGoogle', async (req, res) => {
             if (mongoose.connection.readyState === 1) {
                 console.log("Connection successfull")
                 const existingItem = await UserModel.find({ email: userData.email.toLowerCase() });
+                console.log("existing item:", existingItem)
+                const name = userData.displayName.split(" ")
 
-                if (!existingItem) {
+                if (existingItem.length == 0) {
                     const user = new UserModel({
-                        firstName: userData.displayName,
-                        lastName: "",
+                        firstName: name[0] ? name[0] : userData.displayName,
+                        lastName: name[1] ? name[1] : "",
                         email: userData.email.toLowerCase(),
                         phone: "",
                         city: "",
@@ -418,10 +460,15 @@ app.post('/api/forgotPassword', async (req, res) => {
         if (mongoose.connection.readyState === 1) {
             const findotp = await otpSchema.findOne({ email: email })
             if (findotp) {
+
+                console.log("findotp.otp", findotp.otp)
+                console.log("type of :", typeof findotp.otp)
+                console.log("varifyOtp", varifyOtp)
+                console.log("varifyOtp :", typeof varifyOtp)
                 if (findotp.otp == varifyOtp) {
                     const currentTime = new Date();
                     const expiresAt = new Date(findotp.createdAt);
-                    expiresAt.setMinutes(expiresAt.getMinutes() + 2);
+                    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
 
                     if (currentTime > expiresAt) {
                         const findotp = await otpSchema.findOneAndDelete({ email: email })
@@ -446,7 +493,7 @@ app.post('/api/forgotPassword', async (req, res) => {
         if (mongoose.connection.readyState === 1) {
             const findotp = await otpSchema.findOne({ email: email })
             if (findotp) {
-                res.status(500).json({ status: 500, message: "otp sent already!!" })
+                res.status(500).json({ status: 500, message: "OTP sent already!!" })
             } else {
                 let generatedOtp = Math.floor(Math.random() * 10000);
 
@@ -455,19 +502,19 @@ app.post('/api/forgotPassword', async (req, res) => {
                 }
 
                 const transporter = nodemailer.createTransport({
-                    service: 'gmail', 
+                    service: 'gmail',
                     port: 465,
                     secure: true,
                     auth: {
-                        user: 'salil221254@gmail.com', 
-                        pass: 'lrnu pvye liml zygm'   
+                        user: 'salil221254@gmail.com',
+                        pass: 'lrnu pvye liml zygm'
                     }
                 });
                 const mailOptions = {
-                    from: 'salil221254@gmail.com', 
-                    to: email,                 
-                    subject: 'CRUD OTP',                         
-                    text: `Hi ${email}. \nYour otp is  : ${generatedOtp}`,                        
+                    from: 'salil221254@gmail.com',
+                    to: email,
+                    subject: 'CRUD OTP',
+                    text: `Hi ${email}. \nYour otp is  : ${generatedOtp}`,
                     // html: '<b>Hello world?</b>'                  
                 };
                 transporter.sendMail(mailOptions, async (error, info) => {
@@ -489,6 +536,13 @@ app.post('/api/forgotPassword', async (req, res) => {
     }
 
 });
+
+app.get("/api/logout", async (req, res) => {
+    res.clearCookie('jwt', { path: '/' });
+
+
+    res.status(200).json({ status: 200, message: 'Logged out successfully' });
+})
 
 
 // Error handling middleware
