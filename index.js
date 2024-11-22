@@ -41,7 +41,7 @@ const upload = multer({
 
 // Middlewares
 app.use(cors({
-    origin: ['http://localhost:3000'], // Adjust this to your frontend URL
+    origin: ['http://localhost:3000','https://crudmern-backend-y7n7.onrender.com'], // Adjust this to your frontend URL
     credentials: true // Allow credentials (cookies) to be sent
 }
 
