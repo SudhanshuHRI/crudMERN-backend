@@ -60,6 +60,7 @@ const authenticateToken = (req, res, next) => {
     //if token is saved in cookies:method 1
     const cookie = req.headers.cookie;
     console.log("cookies:", cookie)
+    console.log("Header i got:", req.headers)
     // console.log("req:",req)
     let token = "";
     if (cookie) {
