@@ -72,6 +72,8 @@ const authenticateToken = (req, res, next) => {
 
     //const token = req.cookie.jwt; //"jwt" cookie name
 
+    console.log("token is :",token)
+
     if (!token) return res.status(401).send({ status: 401, message: 'Token required.' });
 
     const varifyTkn = varifyJwtToken(token);
@@ -326,8 +328,8 @@ app.post('/api/login', async (req, res) => {
 
                 res.cookie('jwt', getToken, {
                     httpOnly: true, // Makes the cookie inaccessible to JavaScript
-                    //secure: false,   // Use true in production when using HTTPS
-                    sameSite: 'strict', // Prevents CSRF attacks by restricting cross-site requests
+                    secure: false,   // Use true in production when using HTTPS
+                    sameSite: 'none', // Prevents CSRF attacks by restricting cross-site requests
                     maxAge: 60 * 60 * 1000, // Token expiration time in milliseconds (1 hour here)
                 });
 
