@@ -331,7 +331,7 @@ app.post('/api/login', async (req, res) => {
 
                 res.cookie('jwt', getToken, {
                     httpOnly: true, // Makes the cookie inaccessible to JavaScript
-                    secure: false,   // Use true in production when using HTTPS
+                    secure: true,   // Use true in production when using HTTPS
                     sameSite: 'none', // Prevents CSRF attacks by restricting cross-site requests
                     maxAge: 24 * 60 * 60 * 1000, // Token expiration time in milliseconds (1 day here)
                     path: '/',
