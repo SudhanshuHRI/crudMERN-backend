@@ -97,7 +97,7 @@ const generateToken = (emailId) => {
 
     // this will generate a token that will expire in 1 hour.
     const token = jwt.sign(payload, secretKey, {
-        expiresIn: '1h', // Token expiration time
+        expiresIn: 1000*60*60, // Token expiration time
     });
 
     return token;
