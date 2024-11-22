@@ -59,6 +59,9 @@ const authenticateToken = (req, res, next) => {
 
     //if token is saved in cookies:method 1
     const cookie = req.headers.cookie;
+    console.log("cookies:",cookie)
+    console.log("cookies2:",req.cookies)
+    console.log("req:",req)
     let token = "";
     if (cookie) {
         const jwtCookie = cookie.split('; ').find(row => row.startsWith('jwt='));
