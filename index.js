@@ -41,7 +41,7 @@ const upload = multer({
 
 // Middlewares
 app.use(cors({
-    origin: ['http://localhost:3000','https://crudmern-backend-y7n7.onrender.com'], // Adjust this to your frontend URL
+    origin: ['http://localhost:3000'], // Adjust this to your frontend URL
     credentials: true // Allow credentials (cookies) to be sent
 }
 
@@ -60,7 +60,6 @@ const authenticateToken = (req, res, next) => {
     //if token is saved in cookies:method 1
     const cookie = req.headers.cookie;
     console.log("cookies:",cookie)
-    console.log("cookies2:",req.cookies)
     // console.log("req:",req)
     let token = "";
     if (cookie) {
