@@ -334,6 +334,7 @@ app.post('/api/login', async (req, res) => {
                     secure: false,   // Use true in production when using HTTPS
                     sameSite: 'none', // Prevents CSRF attacks by restricting cross-site requests
                     maxAge: 24 * 60 * 60 * 1000, // Token expiration time in milliseconds (1 day here)
+                    path: '/',
                 });
 
                 res.status(200).json({ status: 200, message: "Login successfull!", user: checkUser });
