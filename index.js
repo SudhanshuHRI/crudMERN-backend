@@ -59,7 +59,7 @@ const authenticateToken = (req, res, next) => {
 
     //if token is saved in cookies:method 1
     const cookie = req.headers.cookie;
-    console.log("cookies:",cookie)
+    console.log("cookies:", cookie)
     // console.log("req:",req)
     let token = "";
     if (cookie) {
@@ -74,7 +74,7 @@ const authenticateToken = (req, res, next) => {
 
     //const token = req.cookie.jwt; //"jwt" cookie name
 
-    console.log("token is :",token)
+    console.log("token is :", token)
 
     if (!token) return res.status(401).send({ status: 401, message: 'Token required.' });
 
@@ -332,7 +332,7 @@ app.post('/api/login', async (req, res) => {
                     httpOnly: true, // Makes the cookie inaccessible to JavaScript
                     secure: false,   // Use true in production when using HTTPS
                     sameSite: 'none', // Prevents CSRF attacks by restricting cross-site requests
-                    maxAge: 60 * 60 * 1000, // Token expiration time in milliseconds (1 hour here)
+                    maxAge: 24 * 60 * 60 * 1000, // Token expiration time in milliseconds (1 day here)
                 });
 
                 res.status(200).json({ status: 200, message: "Login successfull!", user: checkUser });
