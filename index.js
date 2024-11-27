@@ -54,7 +54,8 @@ app.use(express.json({ limit: '10mb' }));
 const authenticateToken = (req, res, next) => {
 
     //if token is send through headers
-    //const authHeader = req.headers['authorization'];
+    const authHeader = req.headers['authorization'];
+    console.log("authHeader",authHeader)
     //const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     //if token is saved in cookies:method 1
