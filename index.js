@@ -41,7 +41,7 @@ const upload = multer({
 
 // Middlewares
 app.use(cors({
-    origin: ['http://localhost:3000',"https://crud-mern-frontend-umber.vercel.app"], // Adjust this to your frontend URL
+    origin: ['http://localhost:3000', "https://crud-mern-frontend-umber.vercel.app"], // Adjust this to your frontend URL
     credentials: true // Allow credentials (cookies) to be sent
 }
 
@@ -55,7 +55,7 @@ const authenticateToken = (req, res, next) => {
 
     //if token is send through headers
     const authHeader = req.headers['authorization'];
-    console.log("authHeader",authHeader)
+    console.log("authHeader", authHeader)
     //const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     //if token is saved in cookies:method 1
@@ -98,7 +98,7 @@ const generateToken = (emailId) => {
 
     // this will generate a token that will expire in 1 hour.
     const token = jwt.sign(payload, secretKey, {
-        expiresIn: 1000*60*60, // Token expiration time
+        expiresIn: 1000 * 60 * 60, // Token expiration time
     });
 
     return token;
@@ -229,7 +229,7 @@ app.post('/api/register', upload.single('photo'), async (req, res) => {
     const phone = req.body.phone;
     const password = req.body.password;
     const city = req.body.city;
-    const profilephoto = req.file.path;
+    const profilephoto = req.file.path ? req.file.path : "";
 
     // console.log("req.body:", req.body)
     console.log("req.file:", req.file)
@@ -361,6 +361,8 @@ app.post('/api/loginWithGoogle', async (req, res) => {
     try {
         const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
         const data = await response.json();
+
+
 
         if (data.error_description) {
             res.status(400).json({ status: 400, message: data.error_description })
